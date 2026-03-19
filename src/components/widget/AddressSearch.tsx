@@ -39,7 +39,7 @@ export const AddressSearch = ({ onAddressSelect }: AddressSearchProps) => {
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 disabled={!ready}
-                className="w-full p-4 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-600 outline-none"
+                className="w-full p-4 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-600 outline-none text-black"
                 placeholder="Enter your Chicago address..."
             />
             {status === "OK" && (
@@ -48,7 +48,7 @@ export const AddressSearch = ({ onAddressSelect }: AddressSearchProps) => {
                         <li
                             key={place_id}
                             onClick={() => handleSelect(description)}
-                            className="p-3 hover:bg-gray-100 cursor-pointer text-sm"
+                            className="p-3 hover:bg-gray-100 cursor-pointer text-sm text-black"
                         >
                             {description}
                         </li>
@@ -57,4 +57,5 @@ export const AddressSearch = ({ onAddressSelect }: AddressSearchProps) => {
             )}
         </div>
     );
+
 };

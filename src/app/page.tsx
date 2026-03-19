@@ -25,7 +25,7 @@ export default function Home() {
                     </header>
 
                     <section className="bg-white p-6 rounded-2xl shadow-xl border border-gray-100">
-                        <h2 className="text-xl font-semibold mb-4 text-center">Step 1: Locate your home</h2>
+                        <h2 className="text-xl font-semibold mb-4 text-center text-black">Step 1: Locate your home</h2>
                         <AddressSearch onAddressSelect={handleAddressSelect} />
                     </section>
 
