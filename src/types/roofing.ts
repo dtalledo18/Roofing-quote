@@ -1,5 +1,5 @@
 export type RoofMaterial = 'asphalt_shingle' | 'metal' | 'flat_tpo' | 'slate';
-export type RoofPitch = 'flat' | 'low' | 'medium' | 'steep';
+export type RoofPitch = 'flat' | 'shallow' | 'medium' | 'steep';
 
 export interface RoofingQuoteRequest {
     address: string;
@@ -14,4 +14,10 @@ export interface QuoteBreakdown {
     laborCost: number;
     removalCost: number;
     total: number;
+}
+
+export interface RoofDetectionData {
+    detectedAreaSqFt: number;
+    detectedPitchDegrees: number;
+    roofPolygon: { lat: number; lng: number }[]; // Para "pintar" el techo
 }
