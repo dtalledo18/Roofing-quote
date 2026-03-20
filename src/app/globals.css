@@ -25,3 +25,56 @@ body {
   color: var(--foreground);
   font-family: sans-serif, Arial, Helvetica;
 }
+/* globals.css — agregar al final de tu archivo globals.css existente */
+
+/* ── Google Places Autocomplete Dropdown ─────────────────────────────────────── */
+.pac-container {
+  margin-top: 6px;
+  border-radius: 12px !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+  overflow: hidden;
+  font-family: 'DM Sans', -apple-system, sans-serif !important;
+  padding: 4px !important;
+  background: #fff;
+}
+
+/* Cada item del dropdown */
+.pac-item {
+  padding: 10px 14px !important;
+  border: none !important;
+  border-radius: 8px !important;
+  cursor: pointer;
+  font-size: 13px !important;
+  color: #374151 !important;
+  line-height: 1.5 !important;
+  transition: background 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pac-item:hover,
+.pac-item-selected {
+  background: #eff6ff !important;
+}
+
+/* Ícono de pin */
+.pac-icon {
+  display: none !important;
+}
+
+/* Texto principal (nombre de calle) */
+.pac-item-query {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #111827 !important;
+  padding-right: 4px;
+}
+
+/* Texto secundario (ciudad, estado) */
+.pac-item span:last-child {
+  color: #6b7280 !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+}

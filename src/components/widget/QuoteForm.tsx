@@ -24,6 +24,11 @@ export const QuoteForm = ({ initialArea, initialPitch, liveArea, address = "" }:
 
     const [sqft, setSqft] = useState(initialArea);
     const [pitch, setPitch] = useState<RoofPitch>(initialPitch);
+
+    // Sincroniza el pitch sugerido cuando la Solar API responde después del mount
+    useEffect(() => {
+        setPitch(initialPitch);
+    }, [initialPitch]);
     const [material, setMaterial] = useState<RoofMaterial>("asphalt_shingle");
     const [layers, setLayers] = useState(1);
 
@@ -111,7 +116,7 @@ export const QuoteForm = ({ initialArea, initialPitch, liveArea, address = "" }:
                         Roof Pitch (Steepness)
                     </label>
                     <div className="grid grid-cols-4 gap-2">
-                        {(["flat", "low", "medium", "steep"] as RoofPitch[]).map((p) => (
+                        {(["flat", "shallow", "medium", "steep"] as RoofPitch[]).map((p) => (
                             <button
                                 key={p}
                                 onClick={() => setPitch(p)}

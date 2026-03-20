@@ -1,13 +1,4 @@
 "use client";
-// components/widget/RoofMap.tsx
-//
-// Flujo:
-//  1. Muestra el polígono detectado automáticamente (Convex Hull de segmentos)
-//  2. Botón "✏️ Edit Roof" activa Drawing Manager para que el usuario
-//     redibuje el polígono encima del satélite con total precisión.
-//  3. Al cerrar el polígono, reemplaza el anterior y activa edición de vértices.
-//  4. onPolygonEdit dispara el recálculo de área en page.tsx.
-
 import { GoogleMap, Polygon, DrawingManager } from "@react-google-maps/api";
 import { useMemo, useCallback, useRef, useState } from "react";
 
@@ -15,41 +6,32 @@ interface RoofMapProps {
     center: { lat: number; lng: number };
     polygonCoords?: { lat: number; lng: number }[];
     onPolygonEdit?: (newCoords: { lat: number; lng: number }[]) => void;
+    zoom?: number;
+    hideControls?: boolean;
 }
 
-const MAP_CONTAINER_STYLE = { width: "100%", height: "480px" };
+const MAP_CONTAINER_STYLE = { width: "100%", height: "400px" };
 
-const MAP_OPTIONS: google.maps.MapOptions = {
-    mapTypeId: "satellite",
-    disableDefaultUI: true,
-    tilt: 0,          // Vista cenital perfecta — sin perspectiva 3D
-    rotateControl: false,
-};
-
-export const RoofMap = ({ center, polygonCoords, onPolygonEdit }: RoofMapProps) => {
+export const RoofMap = ({ center, polygonCoords, onPolygonEdit, zoom = 20, hideControls = false }: RoofMapProps) => {
     const polygonRef = useRef<google.maps.Polygon | null>(null);
     const [isDrawingMode, setIsDrawingMode] = useState(false);
     const [drawnCoords, setDrawnCoords] = useState<{ lat: number; lng: number }[] | undefined>(undefined);
 
-    // Coords activas: las dibujadas por el usuario tienen prioridad
     const activeCoords = drawnCoords ?? polygonCoords;
 
-    // ── Opciones del polígono detectado / editado ─────────────────────────────
     const polygonOptions = useMemo<google.maps.PolygonOptions>(() => ({
         fillColor: "#3b82f6",
         fillOpacity: 0.25,
         strokeColor: "#2563eb",
         strokeWeight: 2.5,
-        editable: !isDrawingMode,   // No editable mientras se dibuja
+        editable: !isDrawingMode,
         draggable: false,
-        clickable: true,
         zIndex: 1,
     }), [isDrawingMode]);
 
-    // ── Opciones del Drawing Manager ─────────────────────────────────────────
     const drawingManagerOptions = useMemo<google.maps.drawing.DrawingManagerOptions>(() => ({
         drawingMode: "polygon" as google.maps.drawing.OverlayType,
-        drawingControl: false, // Ocultamos el control nativo; usamos nuestro botón
+        drawingControl: false,
         polygonOptions: {
             fillColor: "#3b82f6",
             fillOpacity: 0.25,
@@ -61,58 +43,28 @@ export const RoofMap = ({ center, polygonCoords, onPolygonEdit }: RoofMapProps) 
         },
     }), []);
 
-    // ── Callback: vértice movido en polígono existente ────────────────────────
     const onEdit = useCallback(() => {
         if (polygonRef.current && onPolygonEdit) {
             const path = polygonRef.current.getPath();
-            const coords = path.getArray().map(ll => ({
-                lat: ll.lat(),
-                lng: ll.lng(),
-            }));
+            const coords = path.getArray().map(ll => ({ lat: ll.lat(), lng: ll.lng() }));
             onPolygonEdit(coords);
         }
     }, [onPolygonEdit]);
 
-    // ── Callback: usuario terminó de dibujar un nuevo polígono ───────────────
-    const onPolygonComplete = useCallback(
-        (poly: google.maps.Polygon) => {
-            // Extraer vértices
-            const path = poly.getPath();
-            const coords = path.getArray().map(ll => ({
-                lat: ll.lat(),
-                lng: ll.lng(),
-            }));
+    const onPolygonComplete = useCallback((poly: google.maps.Polygon) => {
+        const path = poly.getPath();
+        const coords = path.getArray().map(ll => ({ lat: ll.lat(), lng: ll.lng() }));
+        poly.setMap(null);
+        setDrawnCoords(coords);
+        setIsDrawingMode(false);
+        onPolygonEdit?.(coords);
+    }, [onPolygonEdit]);
 
-            // Eliminar el polígono temporal creado por el Drawing Manager
-            poly.setMap(null);
-
-            // Guardar coords y salir del modo dibujo
-            setDrawnCoords(coords);
-            setIsDrawingMode(false);
-
-            // Notificar al padre
-            onPolygonEdit?.(coords);
-
-            // Guardar referencia para edición posterior
-            // (el Polygon de react-google-maps se montará con estas coords)
-        },
-        [onPolygonEdit]
-    );
-
-    // ── Activar modo dibujo ───────────────────────────────────────────────────
-    const startDrawing = () => {
-        setIsDrawingMode(true);
-        // Limpiar el polígono actual para que el usuario parta de cero
-        setDrawnCoords(undefined);
-    };
-
-    // ── Resetear al polígono detectado automáticamente ────────────────────────
+    const startDrawing = () => { setIsDrawingMode(true); setDrawnCoords(undefined); };
     const resetToDetected = () => {
         setIsDrawingMode(false);
         setDrawnCoords(undefined);
-        if (polygonCoords) {
-            onPolygonEdit?.(polygonCoords);
-        }
+        if (polygonCoords) onPolygonEdit?.(polygonCoords);
     };
 
     return (
@@ -120,11 +72,10 @@ export const RoofMap = ({ center, polygonCoords, onPolygonEdit }: RoofMapProps) 
             <GoogleMap
                 mapContainerStyle={MAP_CONTAINER_STYLE}
                 center={center}
-                zoom={20}
-                options={MAP_OPTIONS}
+                zoom={zoom}
+                options={{ mapTypeId: "satellite", disableDefaultUI: true, tilt: 0 }}
             >
-                {/* Polígono activo (detectado o dibujado por el usuario) */}
-                {activeCoords && !isDrawingMode && (
+                {activeCoords && !isDrawingMode && !hideControls && (
                     <Polygon
                         onLoad={(poly) => (polygonRef.current = poly)}
                         paths={activeCoords}
@@ -133,8 +84,6 @@ export const RoofMap = ({ center, polygonCoords, onPolygonEdit }: RoofMapProps) 
                         onDragEnd={onEdit}
                     />
                 )}
-
-                {/* Drawing Manager — solo activo cuando el usuario presiona Edit */}
                 {isDrawingMode && (
                     <DrawingManager
                         options={drawingManagerOptions}
@@ -143,36 +92,29 @@ export const RoofMap = ({ center, polygonCoords, onPolygonEdit }: RoofMapProps) 
                 )}
             </GoogleMap>
 
-            {/* ── Barra de herramientas flotante ─────────────────────────────── */}
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">
+            {/* Toolbar — solo visible después de una búsqueda */}
+            {!hideControls && <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">
                 {!isDrawingMode ? (
                     <>
-                        {/* Tooltip de ayuda */}
                         <div className="bg-black/70 text-white text-xs px-3 py-1.5 rounded-full backdrop-blur-sm">
                             Drag points to adjust roof edges
                         </div>
-
-                        {/* Botón Redraw — para cuando la detección automática no es precisa */}
                         <button
                             onClick={startDrawing}
                             className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg transition-all active:scale-95"
-                            title="Draw your roof manually for better accuracy"
                         >
-                            ✏️ Redraw Roof
+                            Redraw Roof
                         </button>
-
-                        {/* Botón Reset (solo si el usuario ya dibujó algo) */}
                         {drawnCoords && (
                             <button
                                 onClick={resetToDetected}
-                                className="flex items-center gap-1.5 bg-white/80 hover:bg-white text-gray-700 text-xs font-semibold px-3 py-1.5 rounded-full shadow transition-all active:scale-95"
+                                className="bg-white/80 hover:bg-white text-gray-700 text-xs font-semibold px-3 py-1.5 rounded-full shadow transition-all"
                             >
                                 ↺ Reset
                             </button>
                         )}
                     </>
                 ) : (
-                    /* Instrucción mientras dibuja */
                     <div className="flex items-center gap-2">
                         <div className="bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg animate-pulse">
                             🖊️ Click to place points — Click first point to close shape
@@ -185,14 +127,7 @@ export const RoofMap = ({ center, polygonCoords, onPolygonEdit }: RoofMapProps) 
                         </button>
                     </div>
                 )}
-            </div>
-
-            {/* ── Badge de área detectada (esquina inferior derecha) ───────────── */}
-            {activeCoords && !isDrawingMode && (
-                <div className="absolute bottom-14 right-3 bg-white/90 backdrop-blur-sm border border-gray-200 text-xs font-semibold text-gray-700 px-3 py-1.5 rounded-lg shadow">
-                    {activeCoords.length} vertices detected
-                </div>
-            )}
+            </div>}
         </div>
     );
 };

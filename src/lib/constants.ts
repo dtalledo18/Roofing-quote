@@ -9,7 +9,7 @@ export const CHICAGO_ROOFING_PRICES = {
     LABOR_PER_SQUARE: 250,
     PITCH_MULTIPLIER: {
         flat: 1.0,
-        low: 1.1,
+        shallow: 1.1,
         medium: 1.25,
         steep: 1.5, // Chicago steep roofs require extra safety gear
     },

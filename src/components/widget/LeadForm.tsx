@@ -199,7 +199,7 @@ export const LeadForm = ({ quote, onSuccess, onBack }: LeadFormProps) => {
                     <div>
                         <h3 className="text-lg font-bold text-blue-900 mb-1">Your Estimate Summary</h3>
                         <p className="text-xs text-blue-400 mb-5">
-                            📍 {quote.address || "Chicago Area"}
+                            {quote.address || "Chicago Area"}
                         </p>
 
                         <div className="space-y-2 text-sm mb-6">
