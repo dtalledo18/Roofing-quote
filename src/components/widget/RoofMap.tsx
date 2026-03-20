@@ -152,12 +152,13 @@ export const RoofMap = ({ center, polygonCoords, onPolygonEdit }: RoofMapProps) 
                             Drag points to adjust roof edges
                         </div>
 
-                        {/* Botón Edit Roof */}
+                        {/* Botón Redraw — para cuando la detección automática no es precisa */}
                         <button
                             onClick={startDrawing}
                             className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg transition-all active:scale-95"
+                            title="Draw your roof manually for better accuracy"
                         >
-                            ✏️ Edit Roof
+                            ✏️ Redraw Roof
                         </button>
 
                         {/* Botón Reset (solo si el usuario ya dibujó algo) */}

@@ -1,14 +1,17 @@
 "use client";
 import { useJsApiLoader } from "@react-google-maps/api";
-import { MAPS_LIBRARIES, GOOGLE_MAPS_API_KEY } from "@/lib/google-maps";
+import { GOOGLE_MAPS_API_KEY } from "@/lib/google-maps";
 import { ReactNode } from "react";
 
-// src/components/widget/GoogleMapsProvider.tsx
+// 'drawing' es requerido para el DrawingManager (botón "Edit Roof")
+// 'geometry' es requerido para computeArea en handlePolygonEdit
+const LIBRARIES: ("places" | "drawing" | "geometry")[] = ["places", "drawing", "geometry"];
+
 export const GoogleMapsProvider = ({ children }: { children: ReactNode }) => {
     const { isLoaded, loadError } = useJsApiLoader({
-        id: "google-map-script", // Este ID debe ser único y consistente
+        id: "google-map-script",
         googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-        libraries: MAPS_LIBRARIES,
+        libraries: LIBRARIES,
     });
 
     if (loadError) return <div className="p-4 text-red-500">Error loading Maps</div>;

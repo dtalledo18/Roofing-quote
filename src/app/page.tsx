@@ -66,11 +66,11 @@ export default function Home() {
             <main className="min-h-screen bg-gray-50 p-6 md:p-12">
                 <div className="max-w-4xl mx-auto space-y-8">
                     <header className="text-center space-y-2">
-                        <h1 className="text-4xl font-extrabold text-blue-900">Advanced Roofing Team</h1>
+                        <h1 className="text-4xl font-extrabold text-blue-900 font-open">Advanced Roofing Team</h1>
                         <p className="text-gray-600 text-lg">Instant Roof Estimate — Chicago</p>
                     </header>
 
-                    <section className="bg-white p-6 rounded-2xl shadow-xl border border-gray-100">
+                    <section >
                         <h2 className="text-xl font-semibold mb-4 text-center text-black">
                             Step 1: Enter your street address
                         </h2>
@@ -110,6 +110,7 @@ export default function Home() {
                                 initialArea={detectedArea}
                                 initialPitch={suggestedPitch}
                                 liveArea={detectedArea}
+                                address={selectedAddress}
                             />
                         </section>
                     )}

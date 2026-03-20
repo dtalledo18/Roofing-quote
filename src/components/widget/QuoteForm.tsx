@@ -1,53 +1,83 @@
 "use client";
 // components/widget/QuoteForm.tsx
-//
-// Recibe `liveArea` desde page.tsx cada vez que el polígono se edita.
-// useEffect sincroniza sqft con liveArea SIN destruir el resto del estado
-// (material, pitch, layers) — solucionando el problema del key dinámico.
+// Muestra el precio en vivo. Al hacer click en "Get My Quote"
+// se reemplaza por el LeadForm.
 
 import { useState, useEffect } from "react";
 import { useRoofCalculator } from "@/hooks/useRoofCalculator";
 import { RoofMaterial, RoofPitch } from "@/types/roofing";
+import { LeadForm } from "./LeadForm";
+import { ConfirmationScreen } from "./ConfirmationScreen";
 
 interface QuoteFormProps {
     initialArea: number;
     initialPitch: RoofPitch;
-    liveArea?: number; // Área actualizada en tiempo real por edición del polígono
+    liveArea?: number;
+    address?: string;
 }
 
-export const QuoteForm = ({ initialArea, initialPitch, liveArea }: QuoteFormProps) => {
+type Step = "quote" | "lead" | "confirmation";
+
+export const QuoteForm = ({ initialArea, initialPitch, liveArea, address = "" }: QuoteFormProps) => {
     const { calculateQuote } = useRoofCalculator();
+    const [step, setStep] = useState<Step>("quote");
 
     const [sqft, setSqft] = useState(initialArea);
     const [pitch, setPitch] = useState<RoofPitch>(initialPitch);
     const [material, setMaterial] = useState<RoofMaterial>("asphalt_shingle");
     const [layers, setLayers] = useState(1);
 
-    // Sincroniza el área cuando el polígono cambia — sin reiniciar el formulario
+    // Sincroniza área desde el mapa sin destruir el resto del estado
     useEffect(() => {
         if (liveArea !== undefined && liveArea !== sqft) {
             setSqft(liveArea);
         }
-        // sqft excluido intencionalmente: solo reaccionamos a cambios externos
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [liveArea]);
 
-    // Cálculo reactivo sin useEffect ni estado adicional
     const result = calculateQuote({
-        address: "",
+        address,
         squareFeet: sqft,
         material,
         pitch,
         layersToRemove: layers,
     });
 
+    // Datos para pasar al LeadForm y al PDF
+    const quoteSummary = {
+        address,
+        sqft,
+        material,
+        pitch,
+        layers,
+        materialCost: result.materialCost,
+        laborCost: result.laborCost,
+        removalCost: result.removalCost,
+        total: result.total,
+    };
+
+    if (step === "lead") {
+        return (
+            <LeadForm
+                quote={quoteSummary}
+                onSuccess={() => setStep("confirmation")}
+                onBack={() => setStep("quote")}
+            />
+        );
+    }
+
+    if (step === "confirmation") {
+        return <ConfirmationScreen total={result.total} />;
+    }
+
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white p-8 rounded-2xl shadow-2xl border border-gray-100">
-            {/* ── Controles ───────────────────────────────────────────────────── */}
+
+            {/* ── Controles ──────────────────────────────────────────────── */}
             <div className="space-y-6 text-black">
                 <h3 className="text-xl font-bold text-blue-900 border-b pb-2">Roof Details</h3>
 
-                {/* Área — solo display, se controla desde el mapa */}
+                {/* Área detectada */}
                 <div className="bg-blue-50 border border-blue-100 rounded-lg px-4 py-3">
                     <p className="text-xs text-blue-500 font-semibold uppercase tracking-wider mb-0.5">
                         Detected Roof Area
@@ -125,7 +155,7 @@ export const QuoteForm = ({ initialArea, initialPitch, liveArea }: QuoteFormProp
                 </div>
             </div>
 
-            {/* ── Resumen de precio ────────────────────────────────────────────── */}
+            {/* ── Resumen de precio ───────────────────────────────────────── */}
             <div className="bg-blue-50 p-6 rounded-xl border border-blue-100 flex flex-col justify-between">
                 <div>
                     <h3 className="text-lg font-bold text-blue-900 mb-4">Estimate Summary</h3>
@@ -146,20 +176,24 @@ export const QuoteForm = ({ initialArea, initialPitch, liveArea }: QuoteFormProp
                 </div>
 
                 <div className="mt-6 pt-6 border-t border-blue-200">
-                    <div className="flex justify-between items-end">
+                    <div className="flex justify-between items-end mb-6">
                         <span className="text-blue-900 font-black text-xl uppercase italic">Total Estimate</span>
                         <span className="text-4xl font-black text-blue-600 tracking-tight">
                             ${result.total.toLocaleString()}
                         </span>
                     </div>
-                    <p className="text-[10px] text-gray-400 mt-4 italic">
+
+                    <button
+                        onClick={() => setStep("lead")}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-lg py-4 rounded-xl shadow-lg transition-all active:scale-95 uppercase tracking-wide"
+                    >
+                        Get My Quote →
+                    </button>
+
+                    <p className="text-[10px] text-gray-400 mt-4 italic text-center">
                         *Automated estimate for Chicago area. Final price subject to on-site inspection.
                     </p>
                 </div>
-
-                <button className="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-lg py-4 rounded-xl shadow-lg transition-all active:scale-95 uppercase tracking-wide">
-                    See My Price →
-                </button>
             </div>
         </div>
     );
