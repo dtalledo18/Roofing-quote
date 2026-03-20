@@ -174,9 +174,34 @@ function convexHullFromBorder(points: LatLng[]): LatLng[] {
         }
     }
 
-    return sectors
+    const result = sectors
         .filter(s => s.dist > 0)
         .map(s => s.p);
+
+    return rdpSimplify(result, 0.000015);
+}
+
+// ─── Ramer-Douglas-Peucker ─────────────────────────────────────────────────────
+function rdpSimplify(points: LatLng[], epsilon: number): LatLng[] {
+    if (points.length <= 3) return points;
+    const perp = (p: LatLng, a: LatLng, b: LatLng): number => {
+        const dx = b.lng - a.lng;
+        const dy = b.lat - a.lat;
+        const len = Math.hypot(dx, dy);
+        if (len === 0) return Math.hypot(p.lng - a.lng, p.lat - a.lat);
+        return Math.abs(dy * p.lng - dx * p.lat + b.lng * a.lat - b.lat * a.lng) / len;
+    };
+    let maxDist = 0, maxIdx = 0;
+    for (let i = 1; i < points.length - 1; i++) {
+        const d = perp(points[i], points[0], points[points.length - 1]);
+        if (d > maxDist) { maxDist = d; maxIdx = i; }
+    }
+    if (maxDist > epsilon) {
+        const L = rdpSimplify(points.slice(0, maxIdx + 1), epsilon);
+        const R = rdpSimplify(points.slice(maxIdx), epsilon);
+        return [...L.slice(0, -1), ...R];
+    }
+    return [points[0], points[points.length - 1]];
 }
 
 // ─── Función principal ──────────────────────────────────────────────────────────
@@ -205,6 +230,8 @@ export const getRoofData = async (lat: number, lng: number) => {
     // Construir polígono desde grilla
     let coords: LatLng[] = buildPolygonFromGrid(mainSegments);
     console.log(`🔍 Grid polygon: ${coords.length} puntos`);
+    coords = rdpSimplify(coords, 0.000015);
+    console.log(`U0001F50D RDP simplificado: ${coords.length} puntos`);
 
     // Fallback boundingBox global
     if (coords.length < 3 && data.boundingBox) {
