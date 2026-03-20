@@ -43,6 +43,19 @@ export default function Home() {
         }
     };
 
+    const handlePolygonEdit = (newCoords: { lat: number; lng: number }[]) => {
+        setRoofPolygon(newCoords);
+
+        // Calcular nueva área basada en los puntos movidos
+        if (window.google) {
+            const areaInMeters = google.maps.geometry.spherical.computeArea(
+                newCoords.map(c => new google.maps.LatLng(c.lat, c.lng))
+            );
+            const newSqFt = Math.round(areaInMeters * 10.764);
+            setDetectedArea(newSqFt); // Esto actualizará automáticamente el QuoteForm [cite: 8]
+        }
+    };
+
     return (
         <GoogleMapsProvider>
             <main className="min-h-screen bg-gray-50 p-6 md:p-12">
@@ -60,7 +73,7 @@ export default function Home() {
 
                     {/* Paso 2: Visualización y detección  */}
                     <section className="relative">
-                        <RoofMap center={location} polygonCoords={roofPolygon} />
+                        <RoofMap center={location} polygonCoords={roofPolygon} onPolygonEdit={handlePolygonEdit}/>
                         {selectedAddress && (
                             <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-sm p-3 rounded-lg shadow-md text-sm font-medium text-gray-800 border border-gray-200 text-center">
                                 📍 {selectedAddress}
