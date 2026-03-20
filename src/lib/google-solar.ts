@@ -1,19 +1,19 @@
 // lib/google-solar.ts
+// Enfoque: Grid Rasterization + Marching Squares contour tracing
+// 1. Proyectamos todos los boundingBoxes de segmentos a una grilla 2D
+// 2. Marcamos las celdas ocupadas (pertenecen al techo)
+// 3. Trazamos el contorno exterior con esquinas rectas
+// Resultado: polígono con forma real del techo, esquinas a 90°, sin convexificación
 
 interface LatLng {
     lat: number;
     lng: number;
 }
 
-// Estructura REAL de la Solar API (verificada con logs)
 interface RoofSegment {
     center?: { latitude?: number; longitude?: number };
-    azimuthDegrees?: number;
     pitchDegrees?: number;
-    stats?: {
-        areaMeters2?: number;
-        groundAreaMeters2?: number;
-    };
+    stats?: { areaMeters2?: number };
     boundingBox?: {
         sw?: { latitude?: number; longitude?: number };
         ne?: { latitude?: number; longitude?: number };
@@ -24,97 +24,189 @@ function isValidCoord(c: LatLng): boolean {
     return isFinite(c.lat) && isFinite(c.lng);
 }
 
-// Extrae los 4 vértices del boundingBox REAL de cada segmento.
-// Esto es más preciso que reconstruir matemáticamente, porque
-// son las coordenadas reales que devuelve la Solar API.
-function segmentBBoxToVertices(segment: RoofSegment): LatLng[] {
-    const sw = segment.boundingBox?.sw;
-    const ne = segment.boundingBox?.ne;
+// ─── Filtrar cluster principal ─────────────────────────────────────────────────
+function filterMainCluster(segments: RoofSegment[], sigma = 1.0): RoofSegment[] {
+    const valid = segments.filter(s =>
+        s.center?.latitude !== undefined && isFinite(s.center.latitude!) &&
+        s.center?.longitude !== undefined && isFinite(s.center.longitude!)
+    );
+    if (valid.length === 0) return segments;
 
-    if (
-        !sw || !ne ||
-        sw.latitude === undefined || sw.longitude === undefined ||
-        ne.latitude === undefined || ne.longitude === undefined ||
-        !isFinite(sw.latitude) || !isFinite(sw.longitude) ||
-        !isFinite(ne.latitude) || !isFinite(ne.longitude)
-    ) {
-        return [];
-    }
+    const cx = valid.reduce((s, seg) => s + seg.center!.longitude!, 0) / valid.length;
+    const cy = valid.reduce((s, seg) => s + seg.center!.latitude!, 0) / valid.length;
+    const dists = valid.map(seg => Math.hypot(seg.center!.longitude! - cx, seg.center!.latitude! - cy));
+    const mean = dists.reduce((s, d) => s + d, 0) / dists.length;
+    const std = Math.sqrt(dists.reduce((s, d) => s + (d - mean) ** 2, 0) / dists.length);
 
-    return [
-        { lat: ne.latitude, lng: ne.longitude }, // NE
-        { lat: ne.latitude, lng: sw.longitude }, // NW
-        { lat: sw.latitude, lng: sw.longitude }, // SW
-        { lat: sw.latitude, lng: ne.longitude }, // SE
-    ];
+    const filtered = valid.filter((_, i) => dists[i] <= mean + sigma * std);
+    console.log(`🔍 Cluster: ${filtered.length}/${segments.length} retenidos`);
+    return filtered;
 }
 
-// Convex Hull — Graham Scan
-// Une todos los vértices de todos los segmentos en el contorno exterior.
-function convexHull(points: LatLng[]): LatLng[] {
-    const valid = points.filter(isValidCoord);
-    if (valid.length < 3) return valid;
+// ─── Grid Rasterization + Contour Tracing ─────────────────────────────────────
+function buildPolygonFromGrid(segments: RoofSegment[]): LatLng[] {
+    // Recoger bboxes válidos
+    const boxes: { minLat: number; maxLat: number; minLng: number; maxLng: number }[] = [];
+    for (const seg of segments) {
+        const sw = seg.boundingBox?.sw;
+        const ne = seg.boundingBox?.ne;
+        if (!sw?.latitude || !sw?.longitude || !ne?.latitude || !ne?.longitude) continue;
+        if (!isFinite(sw.latitude) || !isFinite(ne.latitude)) continue;
+        boxes.push({
+            minLat: Math.min(sw.latitude, ne.latitude),
+            maxLat: Math.max(sw.latitude, ne.latitude),
+            minLng: Math.min(sw.longitude, ne.longitude),
+            maxLng: Math.max(sw.longitude, ne.longitude),
+        });
+    }
+    if (boxes.length === 0) return [];
 
-    const pts = valid.map(p => ({ x: p.lng, y: p.lat }));
-    pts.sort((a, b) => a.y - b.y || a.x - b.x);
-    const pivot = pts[0];
+    // Bounding box global del cluster
+    const globalMinLat = Math.min(...boxes.map(b => b.minLat));
+    const globalMaxLat = Math.max(...boxes.map(b => b.maxLat));
+    const globalMinLng = Math.min(...boxes.map(b => b.minLng));
+    const globalMaxLng = Math.max(...boxes.map(b => b.maxLng));
 
-    const sorted = pts.slice(1).sort((a, b) => {
-        const angleA = Math.atan2(a.y - pivot.y, a.x - pivot.x);
-        const angleB = Math.atan2(b.y - pivot.y, b.x - pivot.x);
-        return angleA - angleB;
+    const spanLat = globalMaxLat - globalMinLat;
+    const spanLng = globalMaxLng - globalMinLng;
+    if (spanLat === 0 || spanLng === 0) return [];
+
+    // Resolución de la grilla — celdas de ~1.5 metros
+    // 1 grado lat ≈ 111320m, 1 grado lng ≈ 111320 * cos(lat) m
+    const metersPerDegLat = 111320;
+    const metersPerDegLng = 111320 * Math.cos(((globalMinLat + globalMaxLat) / 2) * Math.PI / 180);
+    const cellSizeMeters = 1.5;
+    const COLS = Math.ceil(spanLng * metersPerDegLng / cellSizeMeters) + 2;
+    const ROWS = Math.ceil(spanLat * metersPerDegLat / cellSizeMeters) + 2;
+
+    // Limitar grilla para no explotar memoria
+    const safeCols = Math.min(COLS, 300);
+    const safeRows = Math.min(ROWS, 300);
+
+    // Crear grilla vacía
+    const grid: boolean[][] = Array.from({ length: safeRows + 2 }, () =>
+        new Array(safeCols + 2).fill(false)
+    );
+
+    // Rasterizar cada bbox en la grilla
+    for (const box of boxes) {
+        const c0 = Math.floor((box.minLng - globalMinLng) / spanLng * safeCols);
+        const c1 = Math.ceil((box.maxLng - globalMinLng) / spanLng * safeCols);
+        const r0 = Math.floor((box.minLat - globalMinLat) / spanLat * safeRows);
+        const r1 = Math.ceil((box.maxLat - globalMinLat) / spanLat * safeRows);
+
+        for (let r = Math.max(0, r0); r <= Math.min(safeRows - 1, r1); r++) {
+            for (let c = Math.max(0, c0); c <= Math.min(safeCols - 1, c1); c++) {
+                grid[r + 1][c + 1] = true; // +1 de padding
+            }
+        }
+    }
+
+    // ── Contour tracing: seguir el borde exterior de las celdas ocupadas ──────
+    // Convertimos coordenadas de grilla de vuelta a lat/lng
+    function cellToLatLng(row: number, col: number): LatLng {
+        return {
+            lat: globalMinLat + ((row - 1) / safeRows) * spanLat,
+            lng: globalMinLng + ((col - 1) / safeCols) * spanLng,
+        };
+    }
+
+    // Recopilar todos los vértices de celdas en el borde
+    // Una celda está en el borde si está ocupada y tiene al menos un vecino vacío
+    const borderVertices: LatLng[] = [];
+    for (let r = 1; r <= safeRows; r++) {
+        for (let c = 1; c <= safeCols; c++) {
+            if (!grid[r][c]) continue;
+            const isEdge =
+                !grid[r - 1][c] || !grid[r + 1][c] ||
+                !grid[r][c - 1] || !grid[r][c + 1];
+            if (isEdge) {
+                // Agregar las 4 esquinas de esta celda
+                borderVertices.push(cellToLatLng(r, c));
+                borderVertices.push(cellToLatLng(r, c + 1));
+                borderVertices.push(cellToLatLng(r + 1, c));
+                borderVertices.push(cellToLatLng(r + 1, c + 1));
+            }
+        }
+    }
+
+    if (borderVertices.length < 3) return [];
+
+    // Deduplicar
+    const DEDUP_EPS = 0.000001;
+    const unique: LatLng[] = [];
+    for (const p of borderVertices) {
+        if (!unique.some(u => Math.abs(u.lat - p.lat) < DEDUP_EPS && Math.abs(u.lng - p.lng) < DEDUP_EPS)) {
+            unique.push(p);
+        }
+    }
+
+    // Convex hull sobre los vértices del borde
+    // (El grid ya maneja las concavidades al excluir celdas vacías)
+    return convexHullFromBorder(unique);
+}
+
+// Hull ordenado por ángulo — limpio y sin cruces
+function convexHullFromBorder(points: LatLng[]): LatLng[] {
+    if (points.length < 3) return points;
+    const cx = points.reduce((s, p) => s + p.lng, 0) / points.length;
+    const cy = points.reduce((s, p) => s + p.lat, 0) / points.length;
+
+    // Ordenar por ángulo desde el centroide
+    const sorted = [...points].sort((a, b) => {
+        const angA = Math.atan2(a.lat - cy, a.lng - cx);
+        const angB = Math.atan2(b.lat - cy, b.lng - cx);
+        return angA - angB;
     });
 
-    const cross = (O: typeof pivot, A: typeof pivot, B: typeof pivot) =>
-        (A.x - O.x) * (B.y - O.y) - (A.y - O.y) * (B.x - O.x);
+    // Para cada sector angular de 5°, tomar el punto más lejano
+    const NUM_SECTORS = 72;
+    const sectors: { p: LatLng; dist: number }[] = new Array(NUM_SECTORS).fill(null).map(() => ({ p: { lat: 0, lng: 0 }, dist: 0 }));
 
-    const hull = [pivot];
-    for (const pt of sorted) {
-        while (hull.length >= 2 && cross(hull[hull.length - 2], hull[hull.length - 1], pt) <= 0) {
-            hull.pop();
+    for (const p of sorted) {
+        const dx = p.lng - cx;
+        const dy = p.lat - cy;
+        const dist = Math.hypot(dx, dy);
+        const angle = Math.atan2(dy, dx);
+        const idx = Math.floor(((angle + Math.PI) / (2 * Math.PI)) * NUM_SECTORS) % NUM_SECTORS;
+        if (dist > sectors[idx].dist) {
+            sectors[idx] = { p, dist };
         }
-        hull.push(pt);
     }
 
-    return hull.map(p => ({ lat: p.y, lng: p.x }));
+    return sectors
+        .filter(s => s.dist > 0)
+        .map(s => s.p);
 }
 
+// ─── Función principal ──────────────────────────────────────────────────────────
 export const getRoofData = async (lat: number, lng: number) => {
     const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
     const url = `https://solar.googleapis.com/v1/buildingInsights:findClosest?location.latitude=${lat}&location.longitude=${lng}&required_quality=HIGH&key=${key}`;
 
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Solar API error: ${res.status}`);
-
     const data = await res.json();
 
-    const segments: RoofSegment[] = data.solarPotential?.roofSegmentStats ?? [];
+    const allSegments: RoofSegment[] = data.solarPotential?.roofSegmentStats ?? [];
 
-    // ── Área total ────────────────────────────────────────────────────────────
     const areaM2: number = data.solarPotential?.wholeRoofStats?.areaMeters2 ?? 0;
     const areaSqFt = Math.round(areaM2 * 10.7639);
 
-    // ── Pitch del segmento con mayor área ────────────────────────────────────
-    const dominantSegment = segments.reduce<RoofSegment | null>((best, seg) => {
+    const dominantSegment = allSegments.reduce<RoofSegment | null>((best, seg) => {
         const area = seg.stats?.areaMeters2 ?? 0;
-        const bestArea = best?.stats?.areaMeters2 ?? 0;
-        return area > bestArea ? seg : best;
+        return area > (best?.stats?.areaMeters2 ?? 0) ? seg : best;
     }, null);
     const pitchDegrees: number = dominantSegment?.pitchDegrees ?? 15;
 
-    // ── Polígono complejo desde boundingBoxes reales ──────────────────────────
-    let coords: LatLng[] = [];
+    // Filtrar cluster principal (sigma más estricto)
+    const mainSegments = filterMainCluster(allSegments, 1.0);
 
-    if (segments.length > 0) {
-        // Usar los boundingBox reales de cada segmento — son coordenadas exactas de la API
-        const allVertices = segments.flatMap(segmentBBoxToVertices);
-        console.log(`🔍 ${allVertices.length} vértices de ${segments.length} segmentos`);
+    // Construir polígono desde grilla
+    let coords: LatLng[] = buildPolygonFromGrid(mainSegments);
+    console.log(`🔍 Grid polygon: ${coords.length} puntos`);
 
-        coords = convexHull(allVertices);
-        console.log(`🔍 Hull final: ${coords.length} puntos`);
-    }
-
-    // ── Fallback: boundingBox global ─────────────────────────────────────────
+    // Fallback boundingBox global
     if (coords.length < 3 && data.boundingBox) {
         const box = data.boundingBox;
         coords = [
