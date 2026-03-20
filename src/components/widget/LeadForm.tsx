@@ -37,6 +37,20 @@ export const LeadForm = ({ quote, onSuccess, onBack }: LeadFormProps) => {
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value, type, checked } = e.target;
+        if (name === "phone") {
+            // Auto-formato (XXX) XXX-XXXX mientras el usuario escribe
+            const digits = value.replace(/\D/g, "").slice(0, 10);
+            let formatted = digits;
+            if (digits.length > 6) {
+                formatted = `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
+            } else if (digits.length > 3) {
+                formatted = `(${digits.slice(0,3)}) ${digits.slice(3)}`;
+            } else if (digits.length > 0) {
+                formatted = `(${digits}`;
+            }
+            setForm(prev => ({ ...prev, phone: formatted }));
+            return;
+        }
         setForm(prev => ({
             ...prev,
             [name]: type === "checkbox" ? checked : value,
@@ -52,6 +66,12 @@ export const LeadForm = ({ quote, onSuccess, onBack }: LeadFormProps) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(form.email)) {
             setError("Please enter a valid email address.");
+            return;
+        }
+        // Validar teléfono US: acepta (312) 555-0000, 312-555-0000, 3125550000, +13125550000
+        const phoneDigits = form.phone.replace(/\D/g, "");
+        if (phoneDigits.length < 10 || phoneDigits.length > 11) {
+            setError("Please enter a valid US phone number (e.g. (312) 555-0000).");
             return;
         }
 
@@ -83,7 +103,7 @@ export const LeadForm = ({ quote, onSuccess, onBack }: LeadFormProps) => {
 
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white p-8 rounded-2xl shadow-2xl border border-gray-100">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-5 sm:p-8 rounded-2xl shadow-2xl border border-gray-100">
 
                 {/* ── Columna izquierda: formulario ─────────────────────────── */}
                 <div className="space-y-5">
@@ -182,7 +202,7 @@ export const LeadForm = ({ quote, onSuccess, onBack }: LeadFormProps) => {
                             className="mt-0.5 w-4 h-4 accent-blue-600 cursor-pointer"
                         />
                         <span className="text-sm text-gray-600 group-hover:text-gray-800 transition-colors">
-                            Send me a quote copy of this estimate to my email
+                            Send me a PDF copy of this estimate to my email
                         </span>
                     </label>
 
@@ -198,9 +218,13 @@ export const LeadForm = ({ quote, onSuccess, onBack }: LeadFormProps) => {
                 <div className="bg-blue-50 p-6 rounded-xl border border-blue-100 flex flex-col justify-between">
                     <div>
                         <h3 className="text-lg font-bold text-blue-900 mb-1">Your Estimate Summary</h3>
-                        <p className="text-xs text-blue-400 mb-5">
+                        <div className="flex items-center gap-1.5 text-xs text-blue-400 mb-5">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+                                <circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/>
+                            </svg>
                             {quote.address || "Chicago Area"}
-                        </p>
+                        </div>
 
                         <div className="space-y-2 text-sm mb-6">
                             <div className="flex justify-between text-gray-500">
@@ -231,7 +255,7 @@ export const LeadForm = ({ quote, onSuccess, onBack }: LeadFormProps) => {
                             </div>
                         </div>
 
-                        <div className="flex justify-between items-end border-t border-blue-200 pt-4">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end border-t border-blue-200 pt-4 gap-1">
                             <span className="text-blue-900 font-black text-lg uppercase italic">Total Estimate</span>
                             <span className="text-4xl font-black text-blue-600 tracking-tight">
                                 ${quote.total.toLocaleString()}
@@ -247,11 +271,19 @@ export const LeadForm = ({ quote, onSuccess, onBack }: LeadFormProps) => {
                     >
                         {loading ? (
                             <>
-                                <span className="animate-spin text-xl">⚙️</span>
+                                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                </svg>
                                 Sending...
                             </>
                         ) : (
-                            "Submit & Get My Quote →"
+                            <>
+                                Submit & Get My Quote
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                </svg>
+                            </>
                         )}
                     </button>
 

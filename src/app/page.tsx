@@ -30,12 +30,20 @@ export default function Home() {
             const data = await getRoofData(lat, lng);
 
             // Validar que la respuesta tenga datos reales de un edificio
-            if (!data.areaSqFt || data.areaSqFt < 100) {
+            // Un techo real: mínimo 300 sqft, máximo 200,000 sqft (edificio muy grande)
+            if (!data.areaSqFt || data.areaSqFt < 300 || data.areaSqFt > 200000) {
                 setRoofError("no_building");
                 return;
             }
             if (!data.coords || data.coords.length < 3) {
                 setRoofError("no_polygon");
+                return;
+            }
+            // Validar que la dirección tenga número de calle (ej: "123 Main St")
+            // Direcciones sin número suelen ser calles, parques, etc.
+            const hasStreetNumber = /^\d+/.test(address.trim());
+            if (!hasStreetNumber) {
+                setRoofError("no_building");
                 return;
             }
 
@@ -46,8 +54,12 @@ export default function Home() {
             else if (data.pitchDegrees < 15) setSuggestedPitch("shallow");
             else if (data.pitchDegrees < 30) setSuggestedPitch("medium");
             else setSuggestedPitch("steep");
-        } catch {
-            setRoofError("api_error");
+        } catch (err: any) {
+            if (err?.message === "no_building") {
+                setRoofError("no_building");
+            } else {
+                setRoofError("api_error");
+            }
         }
     };
 
@@ -71,14 +83,13 @@ export default function Home() {
                             What Will My Roof Cost?
                         </h1>
                         <p className="text-gray-600 text-lg">
-                            Instant Roof Estimate — Chicago
+                            Enter your street address to get an accurate estimate instantly
+
+
                         </p>
                     </header>
 
-                    <section className="bg-white p-6 rounded-2xl shadow-xl border border-gray-100">
-                        <h2 className="text-xl font-semibold mb-4 text-center text-black">
-                            Step 1: Enter your street address
-                        </h2>
+                    <section >
                         <AddressSearch onAddressSelect={handleAddressSelect} />
                     </section>
 
@@ -90,18 +101,13 @@ export default function Home() {
                             onPolygonEdit={handlePolygonEdit}
                             hideControls={!selectedAddress}
                         />
-                        {selectedAddress && (
-                            <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-sm p-3 rounded-lg shadow-md text-sm font-medium text-gray-800 border border-gray-200 text-center">
-                                📍 {selectedAddress}
-                            </div>
-                        )}
                     </section>
 
                     {selectedAddress && roofError && (
                         <section className="animate-in fade-in duration-500">
                             <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-10 text-center space-y-4">
                                 <div className="text-5xl">
-                                    {roofError === "no_building" ? "🏌️" : "⚠️"}
+                                    ⚠️
                                 </div>
                                 <h3 className="text-xl font-bold text-gray-800">
                                     {roofError === "no_building"
@@ -132,7 +138,7 @@ export default function Home() {
                         <section className="animate-in fade-in slide-in-from-bottom-4 duration-700">
                             <div className="text-center mb-8">
                                 <h2 className="text-2xl font-bold text-gray-800">
-                                    Step 2: Review your roof and confirm its slope
+                                    Review your roof and confirm its slope
                                 </h2>
                                 <p className="text-gray-500">
                                     The system detected your roof area and suggested a pitch.

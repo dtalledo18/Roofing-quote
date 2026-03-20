@@ -76,7 +76,7 @@ export const QuoteForm = ({ initialArea, initialPitch, liveArea, address = "" }:
     }
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white p-8 rounded-2xl shadow-2xl border border-gray-100">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-5 sm:p-8 rounded-2xl shadow-2xl border border-gray-100">
 
             {/* ── Controles ──────────────────────────────────────────────── */}
             <div className="space-y-6 text-black">
@@ -181,9 +181,9 @@ export const QuoteForm = ({ initialArea, initialPitch, liveArea, address = "" }:
                 </div>
 
                 <div className="mt-6 pt-6 border-t border-blue-200">
-                    <div className="flex justify-between items-end mb-6">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-1 mb-6">
                         <span className="text-blue-900 font-black text-xl uppercase italic">Total Estimate</span>
-                        <span className="text-4xl font-black text-blue-600 tracking-tight">
+                        <span className="text-3xl sm:text-4xl font-black text-blue-600 tracking-tight">
                             ${result.total.toLocaleString()}
                         </span>
                     </div>

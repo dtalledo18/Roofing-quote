@@ -212,6 +212,10 @@ export const getRoofData = async (lat: number, lng: number) => {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Solar API error: ${res.status}`);
     const data = await res.json();
+    // Si la API dice que no encontró edificio, lanzar error inmediatamente
+    if (data.error?.code === 404 || data.error?.status === "NOT_FOUND") {
+        throw new Error("no_building");
+    }
 
     const allSegments: RoofSegment[] = data.solarPotential?.roofSegmentStats ?? [];
 
