@@ -46,13 +46,18 @@ export default function Home() {
     const handlePolygonEdit = (newCoords: { lat: number; lng: number }[]) => {
         setRoofPolygon(newCoords);
 
-        // Calcular nueva área basada en los puntos movidos
-        if (window.google) {
+        // 1. Verificamos que la librería de geometría esté lista
+        if (window.google && google.maps.geometry) {
+            // 2. Calculamos el área en metros cuadrados
             const areaInMeters = google.maps.geometry.spherical.computeArea(
                 newCoords.map(c => new google.maps.LatLng(c.lat, c.lng))
             );
-            const newSqFt = Math.round(areaInMeters * 10.764);
-            setDetectedArea(newSqFt); // Esto actualizará automáticamente el QuoteForm [cite: 8]
+
+            // 3. Convertimos a Square Feet (1 m² ≈ 10.7639 sq ft)
+            const newSqFt = Math.round(areaInMeters * 10.7639);
+
+            // 4. Actualizamos el estado que alimenta al QuoteForm
+            setDetectedArea(newSqFt);
         }
     };
 
@@ -89,8 +94,9 @@ export default function Home() {
                             </div>
 
                             {/* Pasamos los datos detectados al formulario como props iniciales */}
+                            {/* Al cambiar el 'key', React reinicia el formulario con el tamaño real del polígono editado */}
                             <QuoteForm
-                                key={selectedAddress} // Esto fuerza a React a recrear el componente con los nuevos datos
+                                key={`${selectedAddress}-${detectedArea}`}
                                 initialArea={detectedArea}
                                 initialPitch={suggestedPitch}
                             />

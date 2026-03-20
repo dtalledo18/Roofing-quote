@@ -39,12 +39,6 @@ export const QuoteForm = ({ initialArea, initialPitch }: QuoteFormProps) => {
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                         Estimated Roof Size: <span className="text-blue-600 font-bold">{sqft} sq ft</span>
                     </label>
-                    <input
-                        type="range" min="500" max="8000" step="50"
-                        value={sqft}
-                        onChange={(e) => setSqft(Number(e.target.value))}
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                    />
                 </div>
 
                 {/* Selector de Material */}
