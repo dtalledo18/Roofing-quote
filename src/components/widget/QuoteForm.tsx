@@ -1,47 +1,66 @@
 "use client";
-import { useState } from 'react';
-import { useRoofCalculator } from '@/hooks/useRoofCalculator';
-import { RoofMaterial, RoofPitch } from '@/types/roofing';
+// components/widget/QuoteForm.tsx
+//
+// Recibe `liveArea` desde page.tsx cada vez que el polígono se edita.
+// useEffect sincroniza sqft con liveArea SIN destruir el resto del estado
+// (material, pitch, layers) — solucionando el problema del key dinámico.
+
+import { useState, useEffect } from "react";
+import { useRoofCalculator } from "@/hooks/useRoofCalculator";
+import { RoofMaterial, RoofPitch } from "@/types/roofing";
 
 interface QuoteFormProps {
     initialArea: number;
     initialPitch: RoofPitch;
+    liveArea?: number; // Área actualizada en tiempo real por edición del polígono
 }
 
-export const QuoteForm = ({ initialArea, initialPitch }: QuoteFormProps) => {
+export const QuoteForm = ({ initialArea, initialPitch, liveArea }: QuoteFormProps) => {
     const { calculateQuote } = useRoofCalculator();
 
-    // 1. Solo mantenemos estado para lo que el usuario REALMENTE cambia manualmente
     const [sqft, setSqft] = useState(initialArea);
     const [pitch, setPitch] = useState<RoofPitch>(initialPitch);
-    const [material, setMaterial] = useState<RoofMaterial>('asphalt_shingle');
+    const [material, setMaterial] = useState<RoofMaterial>("asphalt_shingle");
     const [layers, setLayers] = useState(1);
 
-    // 2. ELIMINAMOS useEffect y el estado 'result'.
-    // Calculamos el presupuesto "on the fly" durante el render.
-    // Esto es mucho más rápido y evita el error de ESLint.
+    // Sincroniza el área cuando el polígono cambia — sin reiniciar el formulario
+    useEffect(() => {
+        if (liveArea !== undefined && liveArea !== sqft) {
+            setSqft(liveArea);
+        }
+        // sqft excluido intencionalmente: solo reaccionamos a cambios externos
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [liveArea]);
+
+    // Cálculo reactivo sin useEffect ni estado adicional
     const result = calculateQuote({
         address: "",
         squareFeet: sqft,
         material,
         pitch,
-        layersToRemove: layers
+        layersToRemove: layers,
     });
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white p-8 rounded-2xl shadow-2xl border border-gray-100">
-            {/* Controles del Usuario */}
+            {/* ── Controles ───────────────────────────────────────────────────── */}
             <div className="space-y-6 text-black">
                 <h3 className="text-xl font-bold text-blue-900 border-b pb-2">Roof Details</h3>
 
-                {/* Slider de Pies Cuadrados */}
-                <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Estimated Roof Size: <span className="text-blue-600 font-bold">{sqft} sq ft</span>
-                    </label>
+                {/* Área — solo display, se controla desde el mapa */}
+                <div className="bg-blue-50 border border-blue-100 rounded-lg px-4 py-3">
+                    <p className="text-xs text-blue-500 font-semibold uppercase tracking-wider mb-0.5">
+                        Detected Roof Area
+                    </p>
+                    <p className="text-2xl font-black text-blue-700">
+                        {sqft.toLocaleString()} <span className="text-base font-semibold">sq ft</span>
+                    </p>
+                    <p className="text-[10px] text-blue-400 mt-1">
+                        Drag polygon vertices on the map to adjust
+                    </p>
                 </div>
 
-                {/* Selector de Material */}
+                {/* Material */}
                 <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Material Type</label>
                     <select
@@ -56,31 +75,57 @@ export const QuoteForm = ({ initialArea, initialPitch }: QuoteFormProps) => {
                     </select>
                 </div>
 
-                {/* Pitch / Inclinación (Diseño tipo PDF) */}
+                {/* Pitch */}
                 <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Roof Pitch (Steepness)</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Roof Pitch (Steepness)
+                    </label>
                     <div className="grid grid-cols-4 gap-2">
-                        {(['flat', 'low', 'medium', 'steep'] as RoofPitch[]).map((p) => (
+                        {(["flat", "low", "medium", "steep"] as RoofPitch[]).map((p) => (
                             <button
                                 key={p}
                                 onClick={() => setPitch(p)}
                                 className={`flex flex-col items-center justify-center py-3 px-1 rounded-xl border-2 transition-all ${
                                     pitch === p
-                                        ? 'border-blue-600 bg-blue-50 text-blue-700'
-                                        : 'border-gray-100 bg-gray-50 text-gray-400 hover:border-gray-200'
+                                        ? "border-blue-600 bg-blue-50 text-blue-700"
+                                        : "border-gray-100 bg-gray-50 text-gray-400 hover:border-gray-200"
                                 }`}
                             >
                                 <span className="text-[10px] uppercase font-black tracking-wider">{p}</span>
                                 {initialPitch === p && (
-                                    <span className="text-[8px] mt-1 bg-blue-100 text-blue-600 px-1 rounded">Suggested</span>
+                                    <span className="text-[8px] mt-1 bg-blue-100 text-blue-600 px-1 rounded">
+                                        Suggested
+                                    </span>
                                 )}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Layers */}
+                <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Existing Layers to Remove
+                    </label>
+                    <div className="flex gap-2">
+                        {[1, 2, 3].map((n) => (
+                            <button
+                                key={n}
+                                onClick={() => setLayers(n)}
+                                className={`flex-1 py-2 rounded-lg border-2 text-sm font-bold transition-all ${
+                                    layers === n
+                                        ? "border-blue-600 bg-blue-50 text-blue-700"
+                                        : "border-gray-100 bg-gray-50 text-gray-400 hover:border-gray-200"
+                                }`}
+                            >
+                                {n} {n === 1 ? "layer" : "layers"}
                             </button>
                         ))}
                     </div>
                 </div>
             </div>
 
-            {/* Visualización del Precio (The Results) */}
+            {/* ── Resumen de precio ────────────────────────────────────────────── */}
             <div className="bg-blue-50 p-6 rounded-xl border border-blue-100 flex flex-col justify-between">
                 <div>
                     <h3 className="text-lg font-bold text-blue-900 mb-4">Estimate Summary</h3>
@@ -104,13 +149,17 @@ export const QuoteForm = ({ initialArea, initialPitch }: QuoteFormProps) => {
                     <div className="flex justify-between items-end">
                         <span className="text-blue-900 font-black text-xl uppercase italic">Total Estimate</span>
                         <span className="text-4xl font-black text-blue-600 tracking-tight">
-                             ${result.total.toLocaleString()}
+                            ${result.total.toLocaleString()}
                         </span>
                     </div>
                     <p className="text-[10px] text-gray-400 mt-4 italic">
-                        *This is an automated estimate for Chicago area. Final price subject to on-site inspection.
+                        *Automated estimate for Chicago area. Final price subject to on-site inspection.
                     </p>
                 </div>
+
+                <button className="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-lg py-4 rounded-xl shadow-lg transition-all active:scale-95 uppercase tracking-wide">
+                    See My Price →
+                </button>
             </div>
         </div>
     );
