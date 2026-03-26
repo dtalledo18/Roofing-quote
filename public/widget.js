@@ -1,6 +1,6 @@
 (function () {
     // ── Config ──────────────────────────────────────────────────────────
-    const WIDGET_URL  = "https://tudominio.com/widget";   // ← cambia en producción
+    const WIDGET_URL  = "https://roofing-quote-two.vercel.app/widget.js";   // ← cambia en producción
     const ACCENT      = document.currentScript?.getAttribute("data-color")  || "#1d4ed8";
     const BTN_LABEL   = document.currentScript?.getAttribute("data-label")  || "Roof Quote";
     const POSITION    = document.currentScript?.getAttribute("data-position") || "right"; // "right" | "left"
