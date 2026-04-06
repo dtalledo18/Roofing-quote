@@ -22,7 +22,7 @@ export default function WidgetPage() {
     const [selectedAddress, setSelectedAddress] = useState("");
     const [detectedArea, setDetectedArea] = useState(2000);
     const [roofPolygon, setRoofPolygon] = useState<{ lat: number; lng: number }[] | undefined>(undefined);
-    const [suggestedPitch, setSuggestedPitch] = useState<RoofPitch>("medium");
+    const [suggestedPitch, setSuggestedPitch] = useState<DetectedPitch>("medium");
     const [mapZoom, setMapZoom] = useState(11);
     const [roofError, setRoofError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);

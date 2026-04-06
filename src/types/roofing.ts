@@ -1,6 +1,8 @@
-export type RoofMaterial = 'asphalt_shingle' | 'flat_tpo'; // ← removidos metal y slate
+export type RoofMaterial = 'asphalt_shingle' | 'flat_tpo';
 
-export type RoofPitch = 'flat' | 'shallow' | 'medium' | 'steep' | 'high_steep'; // ← agregado high_steep
+export type RoofPitch = 'shallow' | 'medium' | 'steep' | 'high_steep';
+
+export type DetectedPitch = RoofPitch | 'flat';
 
 export interface RoofingQuoteRequest {
     address: string;

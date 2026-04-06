@@ -12,7 +12,7 @@ export const CHICAGO_ROOFING_PRICES = {
         flat:       1250, // 0/12
         shallow:    425,  // 4/12–6/12
         medium:     450,  // 7/12–8/12
-        steep:      450,  // 9/12–11/12
+        steep:      470,  // 9/12–11/12
         high_steep: 500,  // 12/12
     },
 

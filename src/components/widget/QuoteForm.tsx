@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useRoofCalculator } from "@/hooks/useRoofCalculator";
-import { RoofMaterial, RoofPitch } from "@/types/roofing";
+import { RoofMaterial, RoofPitch, DetectedPitch } from "@/types/roofing";
 import { LeadForm } from "./LeadForm";
 import { ConfirmationScreen } from "./ConfirmationScreen";
 
 interface QuoteFormProps {
     initialArea: number;
-    initialPitch: RoofPitch;
+    initialPitch: DetectedPitch;
     liveArea?: number;
     address?: string;
 }
@@ -17,24 +17,32 @@ type Step = "quote" | "lead" | "confirmation";
 
 // Pitches disponibles para asphalt — TPO no usa pitch
 const ASPHALT_PITCHES: { value: RoofPitch; label: string; range: string }[] = [
-    { value: "flat",       label: "Flat",       range: "0/12"        },
-    { value: "shallow",    label: "Shallow",    range: "4/12–6/12"   },
-    { value: "medium",     label: "Medium",     range: "7/12–8/12"   },
-    { value: "steep",      label: "Steep",      range: "9/12–11/12"  },
-    { value: "high_steep", label: "High Steep", range: "12/12"       },
+    { value: "shallow",    label: "Shallow",    range: "4/12–6/12"  },
+    { value: "medium",     label: "Medium",     range: "7/12–8/12"  },
+    { value: "steep",      label: "Steep",      range: "9/12–11/12" },
+    { value: "high_steep", label: "High Steep", range: "12/12"      },
 ];
 
 export const QuoteForm = ({ initialArea, initialPitch, liveArea, address = "" }: QuoteFormProps) => {
     const { calculateQuote } = useRoofCalculator();
     const [step, setStep] = useState<Step>("quote");
     const [sqft, setSqft] = useState(initialArea);
-    const [pitch, setPitch] = useState<RoofPitch>(initialPitch);
-    const [material, setMaterial] = useState<RoofMaterial>("asphalt_shingle");
+    const suggestedMaterial: RoofMaterial = initialPitch === "flat" ? "flat_tpo" : "asphalt_shingle";
+    const resolvedInitialPitch: RoofPitch = initialPitch === "flat" ? "shallow" : initialPitch;
+    const [material, setMaterial] = useState<RoofMaterial>(suggestedMaterial);
+    const [pitch, setPitch] = useState<RoofPitch>(resolvedInitialPitch);
     const [layers, setLayers] = useState(1);
 
     const isTPO = material === "flat_tpo";
 
-    useEffect(() => { setPitch(initialPitch); }, [initialPitch]);
+    useEffect(() => {
+        if (initialPitch === "flat") {
+            setMaterial("flat_tpo");
+            setPitch("shallow"); // fallback, no se usa pero mantiene estado limpio
+        } else {
+            setPitch(initialPitch);
+        }
+    }, [initialPitch]);
 
     useEffect(() => {
         if (liveArea !== undefined && liveArea !== sqft) setSqft(liveArea);
@@ -75,13 +83,20 @@ export const QuoteForm = ({ initialArea, initialPitch, liveArea, address = "" }:
                             <button
                                 key={m.value}
                                 onClick={() => setMaterial(m.value as RoofMaterial)}
-                                className={`py-3 px-2 rounded-xl border-2 text-sm font-bold transition-all ${
+                                className={`py-3 px-2 rounded-xl border-2 text-sm font-bold transition-all flex flex-col items-center gap-1 ${
                                     material === m.value
                                         ? "border-blue-600 bg-blue-50 text-blue-700"
                                         : "border-gray-100 bg-gray-50 text-gray-400 hover:border-gray-200"
                                 }`}
                             >
                                 {m.label}
+                                {/* Suggested aparece en TPO si pitch es flat, en asphalt si no lo es */}
+                                {((m.value === "flat_tpo" && initialPitch === "flat") ||
+                                    (m.value === "asphalt_shingle" && initialPitch !== "flat")) && (
+                                    <span className="text-[8px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded font-semibold">
+                Suggested
+            </span>
+                                )}
                             </button>
                         ))}
                     </div>
@@ -91,7 +106,7 @@ export const QuoteForm = ({ initialArea, initialPitch, liveArea, address = "" }:
                 {!isTPO && (
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">Roof Pitch (Steepness)</label>
-                        <div className="grid grid-cols-5 gap-1.5">
+                        <div className="grid grid-cols-4 gap-1.5">
                             {ASPHALT_PITCHES.map((p) => (
                                 <button
                                     key={p.value}
@@ -104,7 +119,7 @@ export const QuoteForm = ({ initialArea, initialPitch, liveArea, address = "" }:
                                 >
                                     <span className="text-[9px] uppercase font-black tracking-wider leading-tight text-center">{p.label}</span>
                                     <span className="text-[8px] text-gray-400 mt-0.5">{p.range}</span>
-                                    {initialPitch === p.value && (
+                                    {initialPitch !== "flat" && initialPitch === p.value && (
                                         <span className="text-[7px] mt-1 bg-blue-100 text-blue-600 px-1 rounded">Suggested</span>
                                     )}
                                 </button>
