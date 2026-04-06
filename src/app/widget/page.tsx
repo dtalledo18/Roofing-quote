@@ -12,7 +12,7 @@ import { QuoteForm } from "@/components/widget/QuoteForm";
 import { DEFAULT_CENTER } from "@/lib/google-maps";
 import { GoogleMapsProvider } from "@/components/widget/GoogleMapsProvider";
 import { getRoofData } from "@/lib/google-solar";
-import { RoofPitch } from "@/types/roofing";
+import { DetectedPitch } from "@/types/roofing";
 
 type WidgetStep = "search" | "quote";
 
