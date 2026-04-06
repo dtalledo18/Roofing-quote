@@ -7,14 +7,14 @@ import { QuoteForm } from "@/components/widget/QuoteForm";
 import { DEFAULT_CENTER } from "@/lib/google-maps";
 import { GoogleMapsProvider } from "@/components/widget/GoogleMapsProvider";
 import { getRoofData } from "@/lib/google-solar";
-import { RoofPitch } from "@/types/roofing";
+import { DetectedPitch } from "@/types/roofing";
 
 export default function Home() {
     const [location, setLocation] = useState(DEFAULT_CENTER);
     const [selectedAddress, setSelectedAddress] = useState("");
     const [detectedArea, setDetectedArea] = useState(2000);
     const [roofPolygon, setRoofPolygon] = useState<{ lat: number; lng: number }[] | undefined>(undefined);
-    const [suggestedPitch, setSuggestedPitch] = useState<RoofPitch>("medium");
+    const [suggestedPitch, setSuggestedPitch] = useState<DetectedPitch>("medium");
     const [mapZoom, setMapZoom] = useState(11); // Vista ciudad por defecto
     const [roofError, setRoofError] = useState<string | null>(null);
 
