@@ -96,19 +96,23 @@ export const RoofMap = ({ center, polygonCoords, onPolygonEdit, zoom = 20, hideC
             {!hideControls && <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">
                 {!isDrawingMode ? (
                     <>
-                        <div className="bg-black/70 text-white text-xs px-3 py-1.5 rounded-full backdrop-blur-sm">
+                        {/* Tooltip oscuro con blur */}
+                        <div className="bg-black/70 text-white text-xs px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/10">
                             Drag points to adjust roof edges
                         </div>
+
+                        {/* Botón Redraw: Fondo blanco, texto negro */}
                         <button
                             onClick={startDrawing}
-                            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg transition-all active:scale-95"
+                            className="flex items-center gap-1.5 bg-white hover:bg-gray-100 text-black text-xs font-bold px-4 py-1.5 rounded-full shadow-lg transition-all active:scale-95 border border-gray-200"
                         >
                             Redraw Roof
                         </button>
+
                         {drawnCoords && (
                             <button
                                 onClick={resetToDetected}
-                                className="bg-white/80 hover:bg-white text-gray-700 text-xs font-semibold px-3 py-1.5 rounded-full shadow transition-all"
+                                className="bg-white/80 hover:bg-white text-gray-700 text-xs font-semibold px-3 py-1.5 rounded-full shadow transition-all border border-gray-100"
                             >
                                 ↺ Reset
                             </button>
@@ -116,12 +120,14 @@ export const RoofMap = ({ center, polygonCoords, onPolygonEdit, zoom = 20, hideC
                     </>
                 ) : (
                     <div className="flex items-center gap-2">
-                        <div className="bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg animate-pulse">
+                        {/* Tooltip de dibujo: Ahora igual al de "Drag points" (Negro/70) */}
+                        <div className="bg-black/70 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg backdrop-blur-sm border border-white/10 animate-pulse">
                             🖊️ Click to place points — Click first point to close shape
                         </div>
+
                         <button
                             onClick={() => setIsDrawingMode(false)}
-                            className="bg-white/80 hover:bg-white text-gray-700 text-xs font-semibold px-3 py-1.5 rounded-full shadow transition-all"
+                            className="bg-white/80 hover:bg-white text-gray-700 text-xs font-semibold px-3 py-1.5 rounded-full shadow transition-all border border-gray-100"
                         >
                             Cancel
                         </button>

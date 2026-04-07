@@ -1,11 +1,6 @@
 "use client";
-// app/widget/page.tsx
-// Widget standalone para embed via iframe.
-// Step 1: AddressSearch + RoofMap
-// Step 2: QuoteForm (calculadora)
-// Sin navbar, sin footer, sin scroll — optimizado para iframe 420x640px
-
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useState, useMemo } from "react";
 import { AddressSearch } from "@/components/widget/AddressSearch";
 import { RoofMap } from "@/components/widget/RoofMap";
 import { QuoteForm } from "@/components/widget/QuoteForm";
@@ -14,9 +9,31 @@ import { GoogleMapsProvider } from "@/components/widget/GoogleMapsProvider";
 import { getRoofData } from "@/lib/google-solar";
 import { DetectedPitch } from "@/types/roofing";
 
+// Función auxiliar para convertir HEX a RGB (para los fondos con opacidad)
+function hexToRgb(hex: string) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result
+        ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`
+        : "37, 99, 235"; // fallback blue
+}
+
 type WidgetStep = "search" | "quote";
 
-export default function WidgetPage() {
+function WidgetContent() {
+    const params = useSearchParams();
+
+    // Memorizamos los colores para evitar re-calculos innecesarios
+    const theme = useMemo(() => {
+        const accentParam = params.get("accent") || "1d4ed8";
+        const textParam = params.get("text") || "ffffff";
+        const accentHex = `#${accentParam.replace('#', '')}`;
+        return {
+            accent: accentHex,
+            accentRgb: hexToRgb(accentHex),
+            text: `#${textParam.replace('#', '')}`
+        };
+    }, [params]);
+
     const [step, setStep] = useState<WidgetStep>("search");
     const [location, setLocation] = useState(DEFAULT_CENTER);
     const [selectedAddress, setSelectedAddress] = useState("");
@@ -48,6 +65,7 @@ export default function WidgetPage() {
                 setIsLoading(false);
                 return;
             }
+
             const hasStreetNumber = /^\d+/.test(address.trim());
             if (!hasStreetNumber) {
                 setRoofError("no_building");
@@ -91,33 +109,36 @@ export default function WidgetPage() {
 
     return (
         <GoogleMapsProvider>
-            <div className="w-full h-screen overflow-hidden bg-white flex flex-col">
-
-                {/* ── Header compacto ─────────────────────────────────── */}
+            <div
+                className="w-full h-screen overflow-hidden bg-white flex flex-col"
+                style={{
+                    "--widget-accent": theme.accent,
+                    "--widget-accent-rgb": theme.accentRgb,
+                    "--widget-text": theme.text
+                } as React.CSSProperties}
+            >
+                {/* ── Header ─────────────────────────────────── */}
                 <div className="px-4 pt-4 pb-2 border-b border-gray-100 flex items-center justify-between">
                     <div>
-                        <p className="text-xs font-bold text-blue-600 uppercase tracking-widest">
+                        <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--widget-accent)" }}>
                             Advanced Roofing
                         </p>
                         <h1 className="text-base font-black text-gray-900 leading-tight">
                             {step === "search" ? "What will my roof cost?" : "Your Estimate"}
                         </h1>
                     </div>
-                    {/* Step indicator */}
                     <div className="flex items-center gap-1.5">
-                        <div className={`w-2 h-2 rounded-full transition-colors ${step === "search" ? "bg-blue-600" : "bg-gray-200"}`} />
-                        <div className={`w-2 h-2 rounded-full transition-colors ${step === "quote" ? "bg-blue-600" : "bg-gray-200"}`} />
+                        <div className="w-2 h-2 rounded-full transition-colors" style={{ backgroundColor: step === "search" ? "var(--widget-accent)" : "#E5E7EB" }} />
+                        <div className="w-2 h-2 rounded-full transition-colors" style={{ backgroundColor: step === "quote" ? "var(--widget-accent)" : "#E5E7EB" }} />
                     </div>
                 </div>
 
                 {/* ── Step 1: Search + Map ─────────────────────────────── */}
                 {step === "search" && (
                     <div className="flex flex-col flex-1 overflow-hidden px-4 py-3 gap-3">
-
                         <AddressSearch onAddressSelect={handleAddressSelect} />
 
-                        {/* Mapa — ocupa el espacio restante */}
-                        <div className="flex-1 rounded-xl overflow-hidden border border-gray-100 relative">
+                        <div className="flex-1 rounded-xl overflow-hidden border border-gray-100 relative group">
                             <RoofMap
                                 center={location}
                                 zoom={mapZoom}
@@ -126,39 +147,54 @@ export default function WidgetPage() {
                                 hideControls={!selectedAddress}
                             />
 
-                            {/* Loading overlay */}
+                            {/* --- ESTADO DE CARGA NEUTRAL Y PREMIUM --- */}
                             {isLoading && (
-                                <div className="absolute inset-0 bg-white/70 flex items-center justify-center rounded-xl">
-                                    <div className="flex flex-col items-center gap-2">
-                                        <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                                        <p className="text-xs font-semibold text-blue-700">Analyzing roof...</p>
+                                <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] flex items-center justify-center rounded-xl z-20 transition-all">
+                                    <div className="bg-white/90 shadow-2xl border border-gray-100 px-8 py-6 rounded-2xl flex flex-col items-center gap-4 max-w-[80%]">
+                                        {/* Spinner minimalista en negro */}
+                                        <div className="relative flex items-center justify-center">
+                                            <div className="w-10 h-10 border-2 border-gray-100 rounded-full" />
+                                            <div className="absolute w-10 h-10 border-t-2 border-gray-900 rounded-full animate-spin" />
+                                            <div className="absolute w-2 h-2 bg-gray-900 rounded-full animate-pulse" />
+                                        </div>
+
+                                        <div className="text-center">
+                                            <p className="text-sm font-black text-gray-900 uppercase tracking-widest mb-1">
+                                                Analyzing Roof
+                                            </p>
+                                            <div className="flex gap-1 justify-center">
+                                                <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                                                <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                                                <span className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             )}
                         </div>
 
-                        {/* Error state */}
+                        {/* --- ERROR NEUTRAL --- */}
                         {selectedAddress && roofError && (
                             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
-                                <p className="text-sm font-semibold text-amber-800">
-                                    {roofError === "no_building"
-                                        ? "No building found at this address"
-                                        : "Could not analyze this property"}
+                                <p className="text-sm font-bold text-gray-900 mb-2">
+                                    {roofError === "no_building" ? "No building detected at this location" : "Technical error analyzing property"}
                                 </p>
                                 <button
                                     onClick={handleReset}
-                                    className="mt-1.5 text-xs text-blue-600 font-bold underline"
+                                    className="text-[10px] font-black uppercase tracking-wider text-gray-500 hover:text-black border-b border-gray-300 hover:border-black transition-all"
                                 >
                                     Try a different address
                                 </button>
                             </div>
                         )}
 
-                        {/* CTA — aparece cuando el techo fue detectado */}
+                        {/* --- BOTÓN PRINCIPAL (Ya neutralizado) --- */}
                         {selectedAddress && !roofError && !isLoading && roofPolygon && (
                             <button
                                 onClick={() => setStep("quote")}
-                                className="w-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-black text-base py-3.5 rounded-xl shadow-lg transition-all uppercase tracking-wide"
+                                className="w-full active:scale-95 transition-all duration-300 ease-in-out uppercase tracking-wider py-4 rounded-xl shadow-lg font-black text-base
+               bg-transparent border-2 border-gray-900 text-gray-900
+               hover:bg-gray-900 hover:text-white"
                             >
                                 See My Estimate →
                             </button>
@@ -169,30 +205,35 @@ export default function WidgetPage() {
                 {/* ── Step 2: Calculadora ──────────────────────────────── */}
                 {step === "quote" && (
                     <div className="flex-1 overflow-y-auto px-4 py-3">
-                        {/* Back button */}
+                        {/* Botón Back Neutral */}
                         <button
                             onClick={() => setStep("search")}
-                            className="mb-3 text-xs text-blue-600 font-bold flex items-center gap-1 hover:underline"
+                            className="mb-4 text-xs font-bold flex items-center gap-1 text-gray-400 hover:text-black transition-colors"
                         >
-                            ← Edit address
+                            ← Back
                         </button>
 
-                        {/* Dirección detectada */}
-                        <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 mb-4">
-                            <p className="text-[10px] text-blue-500 font-semibold uppercase tracking-wider">Address</p>
-                            <p className="text-xs font-bold text-blue-800 truncate">{selectedAddress}</p>
+                        {/* Badge de Dirección Neutral */}
+                        <div className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 mb-5 shadow-sm">
+                            <p className="text-[9px] font-black uppercase tracking-[0.15em] text-gray-400 mb-0.5">
+                                Target Property Address
+                            </p>
+                            <p className="text-xs font-bold truncate text-gray-900">
+                                {selectedAddress}
+                            </p>
                         </div>
-
-                        <QuoteForm
-                            initialArea={detectedArea}
-                            initialPitch={suggestedPitch}
-                            liveArea={detectedArea}
-                            address={selectedAddress}
-                        />
+                        <QuoteForm initialArea={detectedArea} initialPitch={suggestedPitch} liveArea={detectedArea} address={selectedAddress} />
                     </div>
                 )}
-
             </div>
         </GoogleMapsProvider>
+    );
+}
+
+export default function WidgetPage() {
+    return (
+        <Suspense fallback={<div className="flex items-center justify-center h-screen text-gray-400">Loading Widget...</div>}>
+            <WidgetContent />
+        </Suspense>
     );
 }

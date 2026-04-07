@@ -92,7 +92,7 @@ export const AddressSearch = ({
                 <input
                     type="text"
                     placeholder={defaultPlaceholder}
-                    className="w-full px-4 py-2 text-sm text-gray-800 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 border border-transparent focus:border-blue-300"
+                    className="w-full px-4 py-2 text-sm text-gray-800 bg-gray-100 rounded-lg outline-none focus:ring-2 focus:ring-black border border-transparent focus:border-blue-300"
                 />
             </Autocomplete>
         );
@@ -108,7 +108,7 @@ export const AddressSearch = ({
             <input
                 type="text"
                 placeholder={defaultPlaceholder}
-                className="w-full px-4 py-3 text-sm text-gray-800 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
+                className="w-full px-4 py-3 text-sm text-gray-800 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-black bg-white shadow-sm"
             />
         </Autocomplete>
     );

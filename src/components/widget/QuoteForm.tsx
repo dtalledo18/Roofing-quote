@@ -23,6 +23,33 @@ const ASPHALT_PITCHES: { value: RoofPitch; label: string; range: string }[] = [
     { value: "high_steep", label: "High Steep", range: "12/12"      },
 ];
 
+const PITCH_ICONS: Record<string, React.ReactNode> = {
+    shallow: (
+        <svg viewBox="0 0 24 24" className="w-10 h-10 mb-1" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M3 15L12 12L21 15" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M5 15V21H19V15" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+    ),
+    medium: (
+        <svg viewBox="0 0 24 24" className="w-10 h-10 mb-1" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <path d="M3 15L12 9L21 15" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M5 15V21H19V15" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+    ),
+    steep: (
+        <svg viewBox="0 0 24 24" className="w-10 h-10 mb-1" fill="none" stroke="currentColor" strokeWidth="2.2">
+            <path d="M3 15L12 6L21 15" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M5 15V21H19V15" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+    ),
+    high_steep: (
+        <svg viewBox="0 0 24 24" className="w-10 h-10 mb-1" fill="none" stroke="currentColor" strokeWidth="2.8">
+            <path d="M3 15L12 3L21 15" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M5 15V21H19V15" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+    ),
+};
+
 export const QuoteForm = ({ initialArea, initialPitch, liveArea, address = "" }: QuoteFormProps) => {
     const { calculateQuote } = useRoofCalculator();
     const [step, setStep] = useState<Step>("quote");
@@ -61,69 +88,109 @@ export const QuoteForm = ({ initialArea, initialPitch, liveArea, address = "" }:
 
             {/* ── Controles ── */}
             <div className="space-y-6 text-black">
-                <h3 className="text-xl font-bold text-blue-900 border-b pb-2">Roof Details</h3>
+                <h3 className="text-xl font-bold text-gray-900 border-b border-gray-100 pb-2">
+                    Roof Details
+                </h3>
 
-                {/* Área */}
-                <div className="bg-blue-50 border border-blue-100 rounded-lg px-4 py-3">
-                    <p className="text-xs text-blue-500 font-semibold uppercase tracking-wider mb-0.5">Detected Roof Area</p>
-                    <p className="text-2xl font-black text-blue-700">
-                        {sqft.toLocaleString()} <span className="text-base font-semibold">sq ft</span>
+                {/* Área - Estética neutral y limpia */}
+                <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+                    <p className="text-xs text-gray-500 font-bold uppercase tracking-wider mb-0.5">
+                        Detected Roof Area
                     </p>
-                    <p className="text-[10px] text-blue-400 mt-1">Drag polygon vertices on the map to adjust</p>
+                    <p className="text-2xl font-black text-gray-900">
+                        {sqft.toLocaleString()} <span className="text-base font-semibold text-gray-500">sq ft</span>
+                    </p>
+                    <p className="text-[10px] text-gray-400 mt-1 italic">
+                        Drag polygon vertices on the map to adjust
+                    </p>
                 </div>
 
-                {/* Material — solo 2 opciones */}
+                {/* Material — Botones en escala de grises */}
                 <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Material Type</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Material Type
+                    </label>
                     <div className="grid grid-cols-2 gap-2">
                         {[
                             { value: "asphalt_shingle", label: "Asphalt Shingles" },
                             { value: "flat_tpo",        label: "Flat Roof (TPO)"  },
-                        ].map((m) => (
-                            <button
-                                key={m.value}
-                                onClick={() => setMaterial(m.value as RoofMaterial)}
-                                className={`py-3 px-2 rounded-xl border-2 text-sm font-bold transition-all flex flex-col items-center gap-1 ${
-                                    material === m.value
-                                        ? "border-blue-600 bg-blue-50 text-blue-700"
-                                        : "border-gray-100 bg-gray-50 text-gray-400 hover:border-gray-200"
-                                }`}
-                            >
-                                {m.label}
-                                {/* Suggested aparece en TPO si pitch es flat, en asphalt si no lo es */}
-                                {((m.value === "flat_tpo" && initialPitch === "flat") ||
-                                    (m.value === "asphalt_shingle" && initialPitch !== "flat")) && (
-                                    <span className="text-[8px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded font-semibold">
-                Suggested
-            </span>
-                                )}
-                            </button>
-                        ))}
+                        ].map((m) => {
+                            const isSelected = material === m.value;
+                            const isSuggested = (m.value === "flat_tpo" && initialPitch === "flat") ||
+                                (m.value === "asphalt_shingle" && initialPitch !== "flat");
+
+                            return (
+                                <button
+                                    key={m.value}
+                                    type="button"
+                                    onClick={() => setMaterial(m.value as RoofMaterial)}
+                                    className={`relative py-4 px-2 rounded-xl border-2 transition-all flex flex-col items-center gap-1 ${
+                                        isSelected
+                                            ? "border-gray-900 bg-gray-100 text-gray-900 shadow-sm"
+                                            : "border-gray-100 bg-gray-50 text-gray-400 hover:border-gray-200"
+                                    }`}
+                                >
+                        <span className={`text-sm ${isSelected ? "font-black" : "font-bold"}`}>
+                            {m.label}
+                        </span>
+
+                                    {/* Badge de Sugerido sutil */}
+                                    {isSuggested && (
+                                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase tracking-tighter ${
+                                            isSelected
+                                                ? "bg-gray-900 text-white"
+                                                : "bg-gray-200 text-gray-500"
+                                        }`}>
+                                Suggested
+                            </span>
+                                    )}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 
                 {/* Pitch — solo si es asphalt */}
                 {!isTPO && (
                     <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Roof Pitch (Steepness)</label>
+                        <label className="block text-sm font-semibold text-gray-700 mb-3">Roof Pitch (Steepness)</label>
                         <div className="grid grid-cols-4 gap-1.5">
-                            {ASPHALT_PITCHES.map((p) => (
-                                <button
-                                    key={p.value}
-                                    onClick={() => setPitch(p.value)}
-                                    className={`flex flex-col items-center justify-center py-2.5 px-1 rounded-xl border-2 transition-all ${
-                                        pitch === p.value
-                                            ? "border-blue-600 bg-blue-50 text-blue-700"
-                                            : "border-gray-100 bg-gray-50 text-gray-400 hover:border-gray-200"
-                                    }`}
-                                >
-                                    <span className="text-[9px] uppercase font-black tracking-wider leading-tight text-center">{p.label}</span>
-                                    <span className="text-[8px] text-gray-400 mt-0.5">{p.range}</span>
-                                    {initialPitch !== "flat" && initialPitch === p.value && (
-                                        <span className="text-[7px] mt-1 bg-blue-100 text-blue-600 px-1 rounded">Suggested</span>
-                                    )}
-                                </button>
-                            ))}
+                            {ASPHALT_PITCHES.map((p) => {
+                                const isSelected = pitch === p.value;
+                                const isSuggested = initialPitch !== "flat" && initialPitch === p.value;
+
+                                return (
+                                    <button
+                                        key={p.value}
+                                        type="button"
+                                        onClick={() => setPitch(p.value)}
+                                        className={`flex flex-col items-center justify-center py-3 px-1 rounded-xl border-2 transition-all ${
+                                            isSelected
+                                                ? "border-gray-900 bg-gray-100 text-gray-900 shadow-sm"
+                                                : "border-gray-100 bg-gray-50 text-gray-400 hover:border-gray-200"
+                                        }`}
+                                    >
+                                        {/* Icono Visual */}
+                                        <div className={`${isSelected ? "text-gray-900" : "text-gray-300"}`}>
+                                            {PITCH_ICONS[p.value]}
+                                        </div>
+
+                                        <span className={`text-[9px] uppercase tracking-wider leading-tight text-center ${isSelected ? "font-black" : "font-bold"}`}>
+                        {p.label}
+                    </span>
+                                        <span className="text-[8px] text-gray-400 mt-0.5">{p.range}</span>
+
+                                        {/* Suggested Badge Neutral */}
+                                        {isSuggested && (
+                                            <span className={`text-[7px] mt-1.5 px-1.5 py-0.5 rounded font-black uppercase tracking-tighter ${
+                                                isSelected ? "bg-gray-900 text-white" : "bg-gray-200 text-gray-500"
+                                            }`}>
+                            Suggested
+                        </span>
+                                        )}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
                 )}
@@ -142,67 +209,80 @@ export const QuoteForm = ({ initialArea, initialPitch, liveArea, address = "" }:
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">Existing Layers to Remove</label>
                         <div className="flex gap-2">
-                            {[1, 2, 3].map((n) => (
-                                <button
-                                    key={n}
-                                    onClick={() => setLayers(n)}
-                                    className={`flex-1 py-2 rounded-lg border-2 text-sm font-bold transition-all ${
-                                        layers === n
-                                            ? "border-blue-600 bg-blue-50 text-blue-700"
-                                            : "border-gray-100 bg-gray-50 text-gray-400 hover:border-gray-200"
-                                    }`}
-                                >
-                                    {n} {n === 1 ? "layer" : "layers"}
-                                </button>
-                            ))}
+                            {[1, 2, 3].map((n) => {
+                                const isSelected = layers === n;
+                                return (
+                                    <button
+                                        key={n}
+                                        type="button"
+                                        onClick={() => setLayers(n)}
+                                        className={`flex-1 py-2 rounded-lg border-2 text-sm transition-all ${
+                                            isSelected
+                                                ? "border-gray-900 bg-gray-100 text-gray-900 font-black shadow-sm"
+                                                : "border-gray-100 bg-gray-50 text-gray-400 font-bold hover:border-gray-200"
+                                        }`}
+                                    >
+                                        {n} {n === 1 ? "layer" : "layers"}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
                 )}
             </div>
 
             {/* ── Estimate Summary ── */}
-            <div className="bg-blue-50 p-6 rounded-xl border border-blue-100 flex flex-col justify-between">
+            <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 flex flex-col justify-between shadow-sm">
                 <div>
-                    <h3 className="text-lg font-bold text-blue-900 mb-4">Estimate Summary</h3>
-                    <div className="space-y-3 text-sm">
-
+                    <h3 className="text-lg font-black text-gray-900 mb-5 uppercase tracking-tight border-b border-gray-200 pb-2">
+                        Estimate Summary
+                    </h3>
+                    <div className="space-y-4">
                         {isTPO ? (
-                            <div className="flex items-center gap-3 text-gray-600">
-                                <span className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0" />
-                                <span>TPO Flat Roof Installation (incl. insulation)</span>
+                            <div className="flex items-start gap-3 text-gray-700">
+                                <span className="w-1.5 h-1.5 mt-1.5 rounded-full bg-gray-900 flex-shrink-0" />
+                                <span className="text-sm font-medium">TPO Flat Roof Installation (incl. insulation)</span>
                             </div>
                         ) : (
                             <>
-                                <div className="flex items-center gap-3 text-gray-600">
-                                    <span className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0" />
-                                    <span>Asphalt Shingles — {ASPHALT_PITCHES.find(p => p.value === pitch)?.label} pitch ({ASPHALT_PITCHES.find(p => p.value === pitch)?.range})</span>
+                                <div className="flex items-start gap-3 text-gray-700">
+                                    <span className="w-1.5 h-1.5 mt-1.5 rounded-full bg-gray-900 flex-shrink-0" />
+                                    <span className="text-sm font-medium">
+                            Asphalt Shingles — <span className="font-bold text-gray-900">{ASPHALT_PITCHES.find(p => p.value === pitch)?.label}</span> pitch ({ASPHALT_PITCHES.find(p => p.value === pitch)?.range})
+                        </span>
                                 </div>
-                                <div className="flex items-center gap-3 text-gray-600">
-                                    <span className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0" />
-                                    <span>Tear-off & Disposal — {layers} {layers === 1 ? "layer" : "layers"}</span>
+                                <div className="flex items-start gap-3 text-gray-700">
+                                    <span className="w-1.5 h-1.5 mt-1.5 rounded-full bg-gray-900 flex-shrink-0" />
+                                    <span className="text-sm font-medium">
+                            Tear-off & Disposal — <span className="font-bold text-gray-900">{layers} {layers === 1 ? "layer" : "layers"}</span>
+                        </span>
                                 </div>
                             </>
                         )}
                     </div>
                 </div>
 
-                <div className="mt-6 pt-6 border-t border-blue-200">
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-1 mb-6">
-                        <span className="text-blue-900 font-black text-xl uppercase italic">Total Estimate</span>
-                        <span className="text-3xl sm:text-4xl font-black text-blue-600 tracking-tight">
-                            ${result.total.toLocaleString()}
-                        </span>
+                <div className="mt-8 pt-6 border-t-2 border-dashed border-gray-200">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-baseline gap-1 mb-6">
+            <span className="text-gray-500 font-black text-xs uppercase tracking-widest">
+                Total Estimate
+            </span>
+                        <span className="text-4xl sm:text-5xl font-black text-gray-900 tracking-tighter">
+                ${result.total.toLocaleString()}
+            </span>
                     </div>
 
+                    {/* Botón Principal: Negro con hover sutil */}
                     <button
                         onClick={() => setStep("lead")}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black text-lg py-4 rounded-xl shadow-lg transition-all active:scale-95 uppercase tracking-wide"
+                        className="w-full bg-gray-900 hover:bg-black text-white font-black text-lg py-4 rounded-xl shadow-xl transition-all active:scale-[0.98] uppercase tracking-wider"
                     >
                         Get My Quote →
                     </button>
 
-                    <p className="text-[10px] text-gray-400 mt-4 italic text-center">
-                        *Automated estimate for Chicago area. Final price subject to on-site inspection.
+                    <p className="text-[10px] text-gray-400 mt-5 italic text-center leading-tight">
+                        *Automated estimate for Chicago area. <br />
+                        Final price subject to on-site inspection.
                     </p>
                 </div>
             </div>
