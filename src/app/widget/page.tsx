@@ -151,12 +151,8 @@ function WidgetContent() {
                             {isLoading && (
                                 <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] flex items-center justify-center rounded-xl z-20 transition-all">
                                     <div className="bg-white/90 shadow-2xl border border-gray-100 px-8 py-6 rounded-2xl flex flex-col items-center gap-4 max-w-[80%]">
-                                        {/* Spinner minimalista en negro */}
-                                        <div className="relative flex items-center justify-center">
-                                            <div className="w-10 h-10 border-2 border-gray-100 rounded-full" />
-                                            <div className="absolute w-10 h-10 border-t-2 border-gray-900 rounded-full animate-spin" />
-                                            <div className="absolute w-2 h-2 bg-gray-900 rounded-full animate-pulse" />
-                                        </div>
+                                        {/* Spinner Clásico Minimalista */}
+                                        <div className="w-10 h-10 border-4 border-gray-200 border-t-gray-900 rounded-full animate-spin" />
 
                                         <div className="text-center">
                                             <p className="text-sm font-black text-gray-900 uppercase tracking-widest mb-1">
